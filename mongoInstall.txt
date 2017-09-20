@@ -1,0 +1,11 @@
+macOS Sierra v10.12.6
+
+Installing MongoDB
+-----------------------
+brew install mongodb
+add mongo to $PATH
+sudo mkdir -p /data/db
+sudo chown -R $USER /data/db
+
+mongod  #start database daemon
+mongo   #runs mongo
