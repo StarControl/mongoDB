@@ -21,6 +21,7 @@ coll.save(a)
 db.customers.find()
 db.customers.find({last_name:"Einstein"},{first_name:true})   # return first_name of all entires matching last_name
 db.customers.find().pretty();
+db.mycollection.find({ "price" : { "$exists" : false } })  # find all docs without "price" field
 
 ### sort(<sort order>)  1=ascending, -1=descending
 db.customers.find().sort({last_name:true}).pretty();  
