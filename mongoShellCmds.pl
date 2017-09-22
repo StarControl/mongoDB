@@ -1,64 +1,127 @@
-# MongoDB Shell Commands
+### MongoDB Shell Commands (case-sensitive) ###
 
-db    # show current db
-show dbs
-db mycustomers    # create db and switch to it
-use <name of db>  # switch to existing db
+db # show current db
+
+# Users
 db.createUser({user:"Jose", pwd:"1234",roles: [ "readWrite", "dbAdmin" ]});
 show users
+
+# Database
+use <name of db>  # switch to db.  if doesn't exist, creates & switches to it
+show dbs
 db.dropDatabase()   # delete current database
+
+# Collections
 db.createCollection('customers');
 show collections
 
-a={first_name:"Albert", last_name:"Einstein"}
+# Temporary variables
+a={first_name:"Albert", last_name:"Einstein"} # variables are not remembered from one db session to another
 db.customers.save(a)
 db.customers.remove(a)
-coll = db.customers
-coll.save(a)
 
-### find( <query> , <projection>)  <projection> is optional
-# Find documents matching the <query> criteria and return just specific fields in the <projection>
+# Handy shorthand
+coll = db.customers   
+coll.find()
+
+#-------------------------------------------------------------------------------------------------
+# find( <query> , <projection>)  <projection> is optional 
+#-------------------------------------------------------------------------------------------------
+# Find all documents matching the <query> criteria
+# If <projection> is provided, return just specific fields in the <projection> from the matches
 db.customers.find()
-db.customers.find({last_name:"Einstein"},{first_name:true})   # return first_name of all entires matching last_name
+db.customers.find({last_name:"Luke"},{first_name:true})  # return first_name of all entires matching last_name
 db.customers.find().pretty();
 db.mycollection.find({ "price" : { "$exists" : false } })  # find all docs without "price" field
+# findOne( <query> )  Same as find(<query>).limit(1)
 
-### sort(<sort order>)  1=ascending, -1=descending
-db.customers.find().sort({last_name:true}).pretty();  
-
-### count()
-### skip(< n >)  Skip n results
-### limit(< n >)  Limit to n results
+#-------------------------------------------------------------------------------------------------
+# Chaining with sort(), count(), skip(), limit(), pretty(), etc
+#-------------------------------------------------------------------------------------------------
+# count()
+# pretty()  Pretty formatting
+# skip(n)   Skip n results, n >= 0
+# sort(n)   n=1 ascending, n=-1 descending
+db.customers.find().sort({last_name:1}).pretty();  
+# limit(n)  Limit to n results, n >= 0
 coll.find().limit(5)
 
-### findOne( <query> )  return single doc or null if not found
-
-### insert( <doc> or <array_of_docs> )   same as save()
+#-------------------------------------------------------------------------------------------------
+# insert( <document> )  
+#-------------------------------------------------------------------------------------------------
+# Similar to save(), see below.
 db.customers.insert({first_name:"John", last_name:"Doe", age:"30"});
-coll.insert(a)
+coll.insert( {_id:ObjectId("59c48c2085b2e4112d19a6b4") , name:"Jack"} )  # do only if key is unique 
 
-### update( <query> , <update> )  where <update> is a document to replace the match
-### update( <query> , <update> , { upsert: boolean, multi: boolean } )
-        # upsert - if no doc match found, create doc
-        # multi - update multiple docs that match
-db.customers.update({first_name:"Mary"},{first_name:"Mary",last_name:"Samson"},{upsert: true});   # if Mary not found, create entry
+#-------------------------------------------------------------------------------------------------
+# save( <document> )
+#-------------------------------------------------------------------------------------------------
+# Same as insert(), except when an _id field is provided in <document>
+# When _id is provided: 
+#     save() inserts <document> if _id isn't a duplicate, otherwise does nothing.
+#     insert() inserts <document> if _id isn't a duplicate, otherwise displays errmsg 
+coll.save( {_id:ObjectId("59c48c2085b2e4112d19a6b4") , name:"Jack"} )  # safe even if key is duplicate 
 
-### To modify rather than replace: <update> document can contain "update operators": $inc, $set, etc.
-# In this scenario, <update> must contain only update operators and update() only updates the specified fields
-db.costumers.update({first_name:"John"},{$set:{last_name:"Denver"}});
-db.costumers.update({first_name:"John"},{$inc:{age:5}});
-db.customers.update({first_name:"John"},{$unset:{age:true}});  # delete age field
+#-------------------------------------------------------------------------------------------------
+# update (to REPLACE an entire document) 
+#-------------------------------------------------------------------------------------------------
+# update( <query> , <update> )  where <update> is a document to replace the match
+# If there is a match using <query>, then the first document matching will be replaced by <update>
+# If there is no match, does nothing
+#
+# update(<query>,<update>, { upsert: boolean, multi: boolean } )
+# Upsert 
+# If there is a match using <query>, then the first document matching will be replaced by <update>
+# If there is no match, then <update> will be inserted.  (note: if the same command is run multiple 
+# times without match, addition idential looking documents will be inserted, each with unique _id)
+  db.customers.update({first_name:"Mary"},{first_name:"Mary",last_name:"Samson"},{upsert: true});  
+# Multi - update multiple docs that match
 
-### Remove
-db.customers.remove({first_name:"John"}); # deletes all matches
-db.customers.remove({first_name:"John"},{justOne:true}); # deletes first match found
+#-------------------------------------------------------------------------------------------------
+# update (to MODIFY/create fields) 
+#-------------------------------------------------------------------------------------------------
+# update(<query>,<update>) where <update> uses "update operators": $inc, $set, etc.
+# In this scenario, <update> must contain only update operators.
+# If there is a match, the specified fields are updated if they exist.  If the matched doc does not 
+# have those fields, those fields are inserted with the specified values.
+# When there is no match, does nothing.
+# Can be combined with upsert. In this case, if there is document matching <query>, a new document 
+# is inserted which contains both <query> and the specified field and value.  
 
-### Other operators
-db.customers.find({$or:[{first_name:"John"},{first_name:"Sharon"}]});   # find records matching either names
-db.customers.find({age:{$lt:40}}).pretty();   # show records under age 40
-db.customers.find({"address.city":"Boston"}); # assuming address is an object with city field
+# $set
+  db.costumers.update( {first_name:"John"} , {$set:{last_name:"Denver"}} );  
 
-### Foreach
-db.customers.find().forEach(function(doc){print("Customer Name: "+doc.first_name)});
+# $inc
+  db.costumers.update( {first_name:"John"} , {$inc:{age:5}});
 
-__END__
+# $unset
+  db.customers.update( {first_name:"John"} , {$unset:{age:true}});  # delete age field
+
+# Others: $min, $max, $rename
+
+# $setOnInsert is another "update operator" but with different behavior
+# if there is a match and the specified field exists (whether or not the field value matches), it does nothing 
+# if there is no match, does nothing
+# Only if the FIRST matching document does not have the specified field does the field get inserted 
+# with the specified value.
+  db.customers.update( {first_name:"John"} , {$setOnInsert:{last_name:"Denver"}} );  
+
+#-------------------------------------------------------------------------------------------------
+# remove 
+#-------------------------------------------------------------------------------------------------
+  db.customers.remove({first_name:"John"}); # deletes ALL matches
+  db.customers.remove({first_name:"John"},{justOne:true}); # deletes first match found
+
+#-------------------------------------------------------------------------------------------------
+# Other commands/examples
+#-------------------------------------------------------------------------------------------------
+  db.customers.find({$or:[{first_name:"John"},{first_name:"Sharon"}]});   # find records matching either names
+  db.customers.find({age:{$lt:40}}).pretty();   # show records under age 40
+
+# Accessing field within an object
+  db.customers.find({"address.city":"Boston"}); # assuming address is an object with city field
+
+# forEach
+  db.customers.find().forEach(function(doc){print("Customer Name: "+doc.first_name)});
+
+  __END__
