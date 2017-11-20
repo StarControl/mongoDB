@@ -3,7 +3,7 @@
 db # show current db
 
 # Users
-db.createUser({user:"Jose", pwd:"1234",roles: [ "readWrite", "dbAdmin" ]});
+db.createUser({user:"Admin", pwd:"1234",roles: [ "readWrite", "dbAdmin" ]});
 show users
 
 # Database
